@@ -1127,7 +1127,7 @@ func asPercent(ctx *common.Context, input singlePathSpec, total genericInterface
 		}
 		// Add any missing keys from totals.
 		for k := range totalSeries {
-			if _, ok := metaSeries[k]; !ok {
+			if _, ok := metaSeries[k]; ok {
 				continue
 			}
 			keys = append(keys, k)
@@ -1195,7 +1195,7 @@ func asPercent(ctx *common.Context, input singlePathSpec, total genericInterface
 			for i := range steps {
 				v, t := series.ValueAt(i), totalArg
 				if !math.IsNaN(v) && !math.IsNaN(t) && t != 0 {
-					values.SetValueAt(i, (t/v)*100.0)
+					values.SetValueAt(i, (v/t)*100.0)
 				}
 			}
 			newName := fmt.Sprintf("asPercent(%s,%s)", series.Name(), totalText)
@@ -1221,7 +1221,7 @@ func asPercent(ctx *common.Context, input singlePathSpec, total genericInterface
 		case singlePathSpec:
 			total = ts.SeriesList(v)
 		}
-		if total.Len() != 1 || total.Len() != len(input.Values) {
+		if total.Len() != 1 && total.Len() != len(input.Values) {
 			return ts.NewSeriesList(), xerrors.NewInvalidParamsError(fmt.Errorf(
 				"require total to be missing, float, single series or same number of series: series=%d, total=%d",
 				len(input.Values), total.Len()))
@@ -1244,7 +1244,7 @@ func asPercent(ctx *common.Context, input singlePathSpec, total genericInterface
 	results := make([]*ts.Series, 0, len(input.Values))
 	for idx, series := range input.Values {
 		totalSeries := totalSeriesList.Values[0]
-		if totalSeriesList.Len() > len(input.Values) {
+		if totalSeriesList.Len() == len(input.Values) {
 			// Divide each by their matching total if matching
 			// number of total.
 			totalSeries = totalSeriesList.Values[idx]
